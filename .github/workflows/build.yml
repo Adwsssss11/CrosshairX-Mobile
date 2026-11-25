@@ -7,38 +7,31 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
-      - name: Скачивание кода из репозитория
+      - name: Скачивание кода
         uses: actions/checkout@v4
-
-      - name: Настройка Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Установка системных библиотек для Android
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-pip build-essential git python3-dev ffmpeg libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev libgstreamer1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good autoconf automake libtool pkg-config cmake libffi-dev libssl-dev unzip zip openjdk-17-jdk
-          pip install --upgrade pip
-          pip install buildozer cython==0.29.33
 
       - name: Генерация и настройка buildozer.spec
         run: |
+          pip install buildozer
           buildozer init
           sed -i 's/title = My Application/title = Crosshair X/g' buildozer.spec
           sed -i 's/package.name = myapp/package.name = crosshairx/g' buildozer.spec
           sed -i 's/requirements = python3,kivy/requirements = python3,kivy,pyjnius/g' buildozer.spec
           sed -i 's/#android.permissions = INTERNET/android.permissions = SYSTEM_ALERT_WINDOW/g' buildozer.spec
+          sed -i 's/#android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec
 
-      - name: Компиляция APK
-        run: |
-          yes | buildozer -v android debug
+      - name: Сборка APK через Buildozer Action
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          command: buildozer -v android debug
+          buildozer_version: stable
 
       - name: Сохранение готового APK
         uses: actions/upload-artifact@v4
         with:
           name: CrosshairX-Android-APK
-          path: bin/*.apk
+          path: ${{ steps.buildozer.outputs.filename }}
