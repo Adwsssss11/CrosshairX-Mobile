@@ -7,15 +7,18 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/kivy/buildozer:latest
+      options: --user root
 
     steps:
       - name: Скачивание кода
         uses: actions/checkout@v4
 
-      - name: Генерация и настройка buildozer.spec
+      - name: Настройка прав и buildozer.spec
         run: |
-          pip install buildozer
+          git config --global --add safe.directory /__w/CrosshairX-Mobile/CrosshairX-Mobile || true
           buildozer init
           sed -i 's/title = My Application/title = Crosshair X/g' buildozer.spec
           sed -i 's/package.name = myapp/package.name = crosshairx/g' buildozer.spec
@@ -23,15 +26,12 @@ jobs:
           sed -i 's/#android.permissions = INTERNET/android.permissions = SYSTEM_ALERT_WINDOW/g' buildozer.spec
           sed -i 's/#android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec
 
-      - name: Сборка APK через Buildozer Action
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
-        with:
-          command: buildozer -v android debug
-          buildozer_version: stable
+      - name: Сборка APK
+        run: |
+          buildozer -v android debug
 
       - name: Сохранение готового APK
         uses: actions/upload-artifact@v4
         with:
           name: CrosshairX-Android-APK
-          path: ${{ steps.buildozer.outputs.filename }}
+          path: bin/*.apk
