@@ -16,9 +16,18 @@ jobs:
       - name: Скачивание кода
         uses: actions/checkout@v4
 
-      - name: Создание чистого buildozer.spec
+      - name: Установка стабильного Python 3.11 и Buildozer
         run: |
           git config --global --add safe.directory '*'
+          apt-get update && apt-get install -y software-properties-common
+          add-apt-repository -y ppa:deadsnakes/ppa
+          apt-get update && apt-get install -y python3.11 python3.11-venv python3.11-dev
+          python3.11 -m venv /opt/py311
+          /opt/py311/bin/pip install --upgrade pip setuptools wheel
+          /opt/py311/bin/pip install buildozer==1.5.0 "cython<3.0"
+
+      - name: Создание чистого buildozer.spec
+        run: |
           rm -f buildozer.spec
           cat << 'EOF' > buildozer.spec
           [app]
@@ -28,26 +37,23 @@ jobs:
           source.dir = .
           source.include_exts = py,png,jpg,kv,atlas
           version = 0.1
-          requirements = python3,kivy==2.3.0,pyjnius
+          requirements = python3==3.11.9,kivy==2.3.1,pyjnius
           orientation = portrait
           fullscreen = 0
           android.permissions = SYSTEM_ALERT_WINDOW
           android.accept_sdk_license = True
-          android.api = 33
-          android.minapi = 24
-          android.ndk = 25b
           android.archs = arm64-v8a
           p4a.branch = master
 
           [buildozer]
-          log_level = 2
+          log_level = 1
           warn_on_root = 0
           EOF
 
       - name: Сборка APK
         run: |
-          set -o pipefail
-          (yes | buildozer android debug || buildozer android debug) > build.log 2>&1 || (tail -n 80 build.log && exit 1)
+          export PATH="/opt/py311/bin:$PATH"
+          yes | /opt/py311/bin/buildozer android debug || /opt/py311/bin/buildozer android debug
 
       - name: Сохранение готового APK
         uses: actions/upload-artifact@v4
