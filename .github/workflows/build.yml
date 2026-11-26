@@ -8,37 +8,28 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/kivy/buildozer:latest
+      options: --user root
 
     steps:
       - name: Скачивание кода
         uses: actions/checkout@v4
 
-      - name: Настройка стабильного Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Установка зависимостей Buildozer
+      - name: Настройка buildozer.spec
         run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-pip build-essential git python3-dev ffmpeg libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev libgstreamer1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good autoconf automake libtool pkg-config cmake libffi-dev libssl-dev unzip zip openjdk-17-jdk
-          pip install --upgrade pip setuptools wheel
-          pip install buildozer "cython<3.0"
-
-      - name: Настройка buildozer.spec (только arm64-v8a)
-        run: |
-          buildozer init
+          git config --global --add safe.directory '*'
+          printf "y\n" | buildozer init
           sed -i 's/title = My Application/title = Crosshair X/g' buildozer.spec
           sed -i 's/package.name = myapp/package.name = crosshairx/g' buildozer.spec
-          sed -i 's/requirements = python3,kivy/requirements = python3,kivy==2.3.0,pyjnius/g' buildozer.spec
-          echo "" >> buildozer.spec
-          echo "android.permissions = SYSTEM_ALERT_WINDOW" >> buildozer.spec
-          echo "android.accept_sdk_license = True" >> buildozer.spec
-          echo "android.archs = arm64-v8a" >> buildozer.spec
+          sed -i 's/requirements = python3,kivy/requirements = python3,kivy,pyjnius/g' buildozer.spec
+          sed -i 's/android.archs = arm64-v8a, armeabi-v7a/android.archs = arm64-v8a/g' buildozer.spec
+          sed -i 's/warn_on_root = 1/warn_on_root = 0/g' buildozer.spec
+          sed -i '/\[app\]/a android.permissions = SYSTEM_ALERT_WINDOW\nandroid.accept_sdk_license = True\np4a.branch = master' buildozer.spec
 
       - name: Сборка APK
         run: |
-          buildozer android debug
+          yes | buildozer android debug || buildozer android debug
 
       - name: Сохранение готового APK
         uses: actions/upload-artifact@v4
