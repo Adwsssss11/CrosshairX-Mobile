@@ -21,7 +21,8 @@ jobs:
       - name: Установка базовых утилит сборки
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq build-essential git zip unzip openjdk-17-jdk autoconf automake libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 cmake libffi-dev libssl-dev
+          sudo apt-get install -y -qq build-essential git zip unzip openjdk-11-jdk autoconf automake libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 cmake libffi-dev libssl-dev
+          sudo update-java-alternatives -s java-1.11.0-openjdk-amd64 || true
           pip install -q --upgrade pip setuptools wheel
           pip install -q buildozer==1.5.0 "cython<3.0"
 
@@ -55,7 +56,7 @@ jobs:
       - name: Сборка APK
         run: |
           set -o pipefail
-          (yes | buildozer android debug || buildozer android debug) > build.log 2>&1 || (grep -v "^#     " build.log | tail -n 50 && exit 1)
+          (yes | buildozer android debug || buildozer android debug) > build.log 2>&1 || (grep -i -E "error|failure|exception|unsupported" build.log | tail -n 35 && exit 1)
 
       - name: Сохранение готового APK
         uses: actions/upload-artifact@v4
